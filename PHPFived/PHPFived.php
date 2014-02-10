@@ -13,12 +13,13 @@ class PHPFived {
         self::load('GS_Debug');
         self::load('GS_Message');
         self::load('GS_Entity');
+        self::load('GS_Storage');
         self::load('GS_Template');
     }
 
     public static function load($class) {
         if (!class_exists($class) && !defined(strtoupper($class))) {
-            include(PHPFIVED_PLUGIN_PATH.$class.'.php');
+            include_once(PHPFIVED_PLUGIN_PATH.$class.'.php');
             if (method_exists($class, 'initialize')) {
                 $object = new $class();
                 $object->initialize();

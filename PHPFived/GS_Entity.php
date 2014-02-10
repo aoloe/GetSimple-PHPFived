@@ -85,6 +85,7 @@ class GS_Entity {
             }
         }
         // echo("<pre>".print_r(debug_backtrace(), 1)."</pre>");
+        backtrace();
         debug('method is not defined',  $method, true); die();
     } // GS_Entity::__call()
     public function read($e, $prefix = '') {

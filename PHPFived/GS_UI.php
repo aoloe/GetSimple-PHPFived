@@ -1,34 +1,104 @@
 <?php
 /**
+ * UI related functions that are offered by GS.
+ * Currently it only allows the plugin to get javascript files loaded only once.
  * TODO: implement, reading the existing info from plugin_functions.php in initialize
  * TODO: implement all the methods GS already has in plugin_functions.php
  */
+
+define('GS_UI_JAVASCRIPT_LIBRARY_LOAD_HEADER', 1);
+define('GS_UI_JAVASCRIPT_LIBRARY_LOAD_NOW', 2);
+define('GS_UI_JAVASCRIPT_LIBRARY_LOAD_FOOTER', 3);
+
 class GS_UI {
-    protected static $javacript_available = array();
-    protected static $javacript_load_queue = array();
-    protected static $javacript_loaded = array();
+    protected static $javascript_library = array();
+    protected static $javascript_library_queue = array();
 
     public static function initialize() {
         // TODO: for now read in the GS own js from the global variables...
+        // files with "load == true" and "in_footer == false" have already been loaded
+        // those with "load == true" and "in_footer == true" will be loaded for GS at the end of the page
+        // those with "where == 2 (GSBACK)", are only needed by GS for the backend.
+        global $GS_scripts;
+        // debug('GS_scripts', $GS_scripts);
+        foreach ($GS_scripts as $key => $value) {
+            self::$javascript_library[$key] = array(
+                'name' => $value['name'],
+                'version' => $value['ver'],
+                'url' => $value['src'],
+                'onready' => $value['in_footer'], // no idea what this is good for... replace by onload()?
+                'frontend' => $value['where'] & GSBACK,
+                'backend' => !($value['where'] & GSBACK),
+                'loaded' => true,
+                // here are the other values...
+                'where' => $value['where'],
+                'load' => $value['load'],
+                'in_footer' => $value['in_footer'], // no idea what this is good for... replace by onload()?
+            );
+            self::$javascript_library[$key]['loaded'] = $GS_scripts;
+        }
     }
     /**
      * Put the path for this javascript module in the list of the available ones.
-     * Only the first path matching a specific will be used.
+     * Only the first path matching a specific scirpt will be used.
+     * (Not sure wether enabling multiple version is an interesting feature...)
+     * @param string $name the name refering the plugin (its lowercase version will be used)
+     * @param string $path
      */
-    public static function register_javascript($name, $path) {
-        if (!array_key_exists($name, $javacript_available) {
-            self::$javacript_available[$name] = $path;
+    public static function register_javascript_library($name, $path, $version = null) {
+        if (!array_key_exists($name, self::$javascript_library)) {
+            if (is_null($version)) {$version = '0.0';}
+            self::$javascript_library[strtolower($name)] = array (
+                'name' => $name,
+                'version' => $version,
+                'url' => $path,
+                'loaded' => false,
+                'onready' => true, // for now all the scripts are added "onready"
+            );
         }
     }
 
-    public static function load_javascript($name, $path = null) {
-        if (!array_key_exists($name, self::$javacript_loaded) && !array_key_exists($name, self::$javacript_load_queue)) {
-            if (isset($path)) {
-                self::$register_javascript($name, $path);
+    /**
+     * Add the link to the scripts:
+     * - in the headers (not implemented yet)
+     * - as soon as possible
+     * - at the end of the document 
+     * @param string $name the name matching the values in $javascript_load
+     * @param integer $position one 
+     * @return string
+     */
+    public static function load_javascript_library($name, $position = GS_UI_JAVASCRIPT_LIBRARY_LOAD_HEADER) {
+        $render = '';
+        if (
+            array_key_exists($name, self::$javascript_library) &&
+            !self::$javascript_library[$name]['loaded']
+        ) {
+            if ($position == GS_UI_JAVASCRIPT_LIBRARY_LOAD_NOW) {
+                if (array_key_exists($name, self::$javascript_library_queue)) {
+                }
+                self::render_javascript_library($name);
+            } else {
             }
-            self::$javacript_load_queue[] = $name;
+            self::$javascript_library[$name]['loaded'] = true;
+            if (array_key_exists($name, self::$javascript_library_queue)) {
+            } else {
+                self::$javascript_library_queue[] = $name;
+            }
         }
         // if the headers have not been output, put it there, otherwise now.
+    }
+    public static function render_javascript_library($name = null) {
+        if (isset($name)) {
+            if (array_key_exists($name, self::$javascript_library)) {
+                self::$javascript_library[$name]['loaded'] = true;
+                echo('<script type="text/javascript" src="'.self::$javascript_library[$name]['url'].'"></script>'."\n");
+            }
+        } else {
+            foreach (self::$javascript_library_queue as $item) {
+                self::render_javascript_library($item);
+            }
+            self::$javascript_library_queue = array();
+        }
     }
 }
 /*
