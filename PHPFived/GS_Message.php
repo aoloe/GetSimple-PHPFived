@@ -50,6 +50,7 @@ class GS_Message {
         // TODO: make sure that the warning is stored in the log files is stored in the log files
         trigger_error($error); // add it as a warning
         GS_backtrace();
+        GS_Debug('error', $error);
         $this->error[] = $error;
     }
 
